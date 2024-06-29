@@ -216,7 +216,8 @@
             explosions.forEach(explosion => {
                 ctx.drawImage(explosion.image, 
                               explosion.frame * explosion.frameWidth, 0, explosion.frameWidth, explosion.frameHeight, 
-                              explosion.x - explosion.frameWidth, explosion.y - explosion.frameHeight, explosion.frameWidth * 2, explosion.frameHeight * 2);
+                              explosion.x - (explosion.frameWidth), explosion.y - (explosion.frameHeight), 
+                              explosion.frameWidth * 2, explosion.frameHeight * 2);
             });
         }
 
