@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAAAGH! Space Shoota!</title>
+    <style>
+        canvas { border: 1px solid black; display: block; margin: 0 auto; }
+        body { font-family: Arial, sans-serif; background-color: #222; color: #0f0; overflow: hidden; margin: 0; padding: 0; }
+        #upgradeMenu, #gameOverMenu { display: none; }
+        #upgradeMenu {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: green;
+            padding: 10px;
+            border: 2px solid #0f0;
+            color: #fff;
+            text-align: center;
+            z-index: 10;
+        }
+        #upgradeMenu button {
+            background-color: #444;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Arial', sans-serif;
+        }
+        #upgradeMenu button:hover {
+            background-color: #666;
+        }
+        #gameOverMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+        #gameOverMenu button {
+            background-color: #444;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Arial', sans-serif;
+        }
+        #gameOverMenu button:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="upgradeMenu">
+        <h2>UPGRADE YER SHIP, YA GIT!</h2>
+        <button onclick="upgradeShootas()">More Dakka (10 scrap)</button>
+        <button onclick="upgradeArma()">Betta Arma (15 scrap)</button>
+        <button onclick="upgradeSpeed()">Go Fasta (5 scrap)</button>
+        <button onclick="startNextWave()">BACK TO FOIGHTIN'</button>
+    </div>
+    <div id="gameOverMenu">
+        <h2>GAME OVER, YA GIT!</h2>
+        <button onclick="restartGame()">TRY AGAIN</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Initial call to set the canvas size
+
+        // Load enemy images
+        const images = {
+            humie: new Image(),
+            pointyEar: new Image(),
+            tinEad: new Image(),
+            spaceNasty: new Image(),
+            humieProjectile: new Image(),
+            pointyEarProjectile: new Image(),
+            tinEadProjectile: new Image(),
+            spaceNastyProjectile: new Image(),
+            orkProjectile: new Image(),
+            shipExplosion: new Image(),
+            projectileExplosion: new Image(),
+            orkShip: new Image() // Added orkShip image
+        };
+        images.humie.src = 'https://i.imgur.com/qGd6kKm.png';
+        images.pointyEar.src = 'https://i.imgur.com/2385clh.png';
+        images.tinEad.src = 'https://i.imgur.com/3DrKiMa.png';
+        images.spaceNasty.src = 'https://i.imgur.com/44s62sE.png';
+        images.humieProjectile.src = 'https://i.imgur.com/s003Ghn.png';
+        images.pointyEarProjectile.src = 'https://i.imgur.com/QBYlWW1.png';
+        images.tinEadProjectile.src = 'https://i.imgur.com/eNps7X0.png';
+        images.spaceNastyProjectile.src = 'https://i.imgur.com/phmf1c6.png';
+        images.orkProjectile.src = 'https://i.imgur.com/rZjIZtB.png';
+        images.shipExplosion.src = 'https://i.imgur.com/xJzytnV.png'; // Ship explosion sprite sheet
+        images.projectileExplosion.src = 'https://i.imgur.com/fP4DBiR.png'; // Projectile explosion sprite sheet
+        images.orkShip.src = 'https://i.imgur.com/uUcrlVb.png'; // Load orkShip image
+
+        // Load sounds
+        const fireSound = new Audio('https://cdn.freesound.org/previews/239/239596_109726-lq.mp3');
+        fireSound.loop = true;  // Ensure the sound can loop
+
+        // Ork Ship
+        const orkShip = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 60,  // Doubled the width
+            height: 80, // Doubled the height
+            color: 'green',
+            speed: 5,
+            shootas: 1,
+            arma: 0,
+            scrap: 0,
+            health: 100,
+            ammo: 100,
+            angle: Math.PI, // Rotated 180 degrees
+            waaaghActive: false,
+            waaaghSpeedBoost: 2,
+            originalSpeed: 5,
+            waaaghAmmoBoost: false
+        };
+
+        // Game state
+        let enemies = [];
+        let bullets = [];
+        let enemyBullets = [];
+        let particles = [];
+        let explosions = [];
+        let score = 0;
+        let level = 1;
+        let wave = 1;
+        let waaghMeter = 0;
+        let gameState = 'playing';
+        let enemiesRemainingInWave = 0;
+
+        // Movement and shooting
+        let keys = {};
+        let shooting = false;
+        let fireSoundPlaying = false;
+        let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
+        let screenShakeDuration = 0;
+
+        // Enemy types
+        const enemyTypes = [
+            { name: 'Humie', image: images.humie, health: 30, speed: 2, width: 34, height: 51, damage: 5, shootChance: 0.01, bulletSize: 20, projectile: images.humieProjectile },
+            { name: 'Pointy-Ear', image: images.pointyEar, health: 20, speed: 4, width: 26, height: 42.5, damage: 3, shootChance: 0.02, bulletSize: 16, projectile: images.pointyEarProjectile },
+            { name: 'Tin-\'Ead', image: images.tinEad, health: 50, speed: 1, width: 42.5, height: 59.5, damage: 10, shootChance: 0.005, bulletSize: 24, projectile: images.tinEadProjectile },
+            { name: 'Space Nasty', image: images.spaceNasty, health: 40, speed: 3, width: 51, height: 68, damage: 7, shootChance: 0.015, bulletSize: 28, projectile: images.spaceNastyProjectile }
+        ];
+
+        function drawOrkShip() {
+            ctx.save();
+            ctx.translate(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2);
+            ctx.rotate(orkShip.angle);
+            ctx.translate(-orkShip.width / 2, -orkShip.height / 2);
+
+            ctx.drawImage(images.orkShip, 0, 0, orkShip.width, orkShip.height);
+
+            ctx.restore();
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                ctx.rotate(enemy.angle);
+                ctx.translate(-enemy.width / 2, -enemy.height / 2);
+
+                ctx.drawImage(enemy.image, 0, 0, enemy.width, enemy.height);
+
+                ctx.restore();
+            });
+        }
+
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.save();
+                ctx.translate(bullet.x, bullet.y);
+                ctx.rotate(bullet.angle);
+                ctx.translate(-bullet.width / 2, -bullet.height / 2); // Center the bullet
+                ctx.drawImage(bullet.image, 0, 0, bullet.width, bullet.height);
+                ctx.restore();
+            });
+        }
+
+        function drawEnemyBullets() {
+            enemyBullets.forEach(bullet => {
+                ctx.save();
+                ctx.translate(bullet.x, bullet.y);
+                ctx.rotate(bullet.angle);
+                ctx.translate(-bullet.width / 2, -bullet.height / 2); // Center the bullet
+                ctx.drawImage(bullet.image, 0, 0, bullet.width, bullet.height);
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+            });
+        }
+
+        function drawExplosions() {
+            explosions.forEach(explosion => {
+                ctx.drawImage(explosion.image, 
+                              explosion.frame * explosion.frameWidth, 0, explosion.frameWidth, explosion.frameHeight, 
+                              explosion.x - explosion.frameWidth, explosion.y - explosion.frameHeight, explosion.frameWidth * 2, explosion.frameHeight * 2);
+            });
+        }
+
+        function moveEnemies() {
+            enemies.forEach(enemy => {
+                const dx = orkShip.x - enemy.x;
+                const dy = orkShip.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                enemy.vx = (dx / dist) * enemy.speed;
+                enemy.vy = (dy / dist) * enemy.speed;
+                enemy.x += enemy.vx;
+                enemy.y += enemy.vy;
+                enemy.angle = Math.atan2(enemy.vy, enemy.vx) + Math.PI / 2;
+
+                if (enemy.y > canvas.height) {
+                    enemies = enemies.filter(e => e !== enemy);
+                    enemiesRemainingInWave--;
+                }
+            });
+        }
+
+        function moveBullets() {
+            bullets.forEach(bullet => {
+                bullet.x += 7 * Math.cos(bullet.angle);
+                bullet.y += 7 * Math.sin(bullet.angle);
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets = bullets.filter(b => b !== bullet);
+                }
+            });
+        }
+
+        function moveEnemyBullets() {
+            enemyBullets.forEach(bullet => {
+                bullet.x += bullet.speed * Math.cos(bullet.angle);
+                bullet.y += bullet.speed * Math.sin(bullet.angle);
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    enemyBullets = enemyBullets.filter(b => b !== bullet);
+                }
+            });
+        }
+
+        function moveParticles() {
+            particles.forEach(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                if (particle.life <= 0) {
+                    particles = particles.filter(p => p !== particle);
+                }
+            });
+        }
+
+        function moveExplosions() {
+            explosions.forEach((explosion, index) => {
+                explosion.frame++;
+                if (explosion.frame >= explosion.totalFrames * 2) { // Explosions last twice as long
+                    explosions.splice(index, 1);
+                }
+            });
+        }
+
+        function spawnEnemy() {
+            if (enemiesRemainingInWave > 0 && Math.random() < 0.02) {
+                const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                enemies.push({
+                    ...type,
+                    x: Math.random() * (canvas.width - type.width),
+                    y: -type.height,
+                    angle: 0,
+                    vx: 0,
+                    vy: 0
+                });
+                enemiesRemainingInWave--;
+            }
+        }
+
+        function enemyShoot() {
+            enemies.forEach(enemy => {
+                if (Math.random() < enemy.shootChance) {
+                    const dx = orkShip.x - enemy.x;
+                    const dy = orkShip.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx);
+                    enemyBullets.push({
+                        x: enemy.x + enemy.width / 2,
+                        y: enemy.y + enemy.height / 2,
+                        width: enemy.bulletSize,  // Adjust as necessary for projectile size
+                        height: enemy.bulletSize,  // Adjust as necessary for projectile size
+                        image: enemy.projectile,
+                        speed: 5,
+                        angle: angle
+                    });
+                }
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach(bullet => {
+                enemies.forEach(enemy => {
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        enemy.health -= 10 + orkShip.shootas * 2;
+                        bullets = bullets.filter(b => b !== bullet);
+                        createParticles(enemy.x, enemy.y, enemy.color);
+                        createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
+                        if (enemy.health <= 0) {
+                            enemies = enemies.filter(e => e !== enemy);
+                            score += 10;
+                            orkShip.scrap += 2;
+                            waaghMeter += 5;
+                            orkShip.ammo += 10; // Give ammo for each enemy destroyed
+                            screenShake(10); // Screen shake effect
+                        }
+                    }
+                });
+            });
+
+            enemyBullets.forEach(bullet => {
+                if (bullet.x < orkShip.x + orkShip.width &&
+                    bullet.x + bullet.width > orkShip.x &&
+                    bullet.y < orkShip.y + orkShip.height &&
+                    bullet.y + bullet.height > orkShip.y) {
+                    orkShip.health -= Math.max(bullet.width - orkShip.arma, 1); // Minimum damage of 1
+                    enemyBullets = enemyBullets.filter(b => b !== bullet);
+                    createParticles(orkShip.x, orkShip.y, 'red');
+                    createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
+                    if (orkShip.health <= 0) {
+                        gameState = 'gameOver';
+                    }
+                }
+            });
+
+            bullets.forEach((bullet, bulletIndex) => {
+                enemyBullets.forEach((enemyBullet, enemyBulletIndex) => {
+                    if (bullet.x < enemyBullet.x + enemyBullet.width &&
+                        bullet.x + bullet.width > enemyBullet.x &&
+                        bullet.y < enemyBullet.y + enemyBullet.height &&
+                        bullet.y + bullet.height > enemyBullet.y) {
+                        bullets.splice(bulletIndex, 1);
+                        enemyBullets.splice(enemyBulletIndex, 1);
+                        createParticles((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, 'orange');
+                        createExplosion((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, images.projectileExplosion, 32, 32, 16, 'projectile');
+                    }
+                });
+            });
+
+            enemies.forEach(enemy => {
+                if (enemy.x < orkShip.x + orkShip.width &&
+                    enemy.x + enemy.width > orkShip.x &&
+                    enemy.y < orkShip.y + orkShip.height &&
+                    enemy.y + enemy.height > orkShip.y) {
+                    orkShip.health -= Math.max(enemy.damage - orkShip.arma, 1); // Minimum damage of 1
+                    orkShip.ammo += 10; // Refill ammo on collision
+                    enemies = enemies.filter(e => e !== enemy);
+                    createParticles(orkShip.x, orkShip.y, 'red');
+                    createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
+                    if (orkShip.health <= 0) {
+                        gameState = 'gameOver';
+                    }
+                }
+            });
+
+            // Check for level completion
+            if (enemiesRemainingInWave === 0 && enemies.length === 0) {
+                gameState = 'upgrading';
+                showUpgradeMenu();
+            }
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 5 + 2,
+                    color: color,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: Math.random() * 20 + 10
+                });
+            }
+        }
+
+        function createExplosion(x, y, image, frameWidth, frameHeight, totalFrames, type) {
+            explosions.push({ x: x, y: y, image: image, frame: 0, frameWidth: frameWidth, frameHeight: frameHeight, totalFrames: totalFrames });
+            const sound = new Audio(type === 'ship' ? 'https://cdn.freesound.org/previews/609/609587_1038806-lq.mp3' : 'https://cdn.freesound.org/previews/609/609588_1038806-lq.mp3');
+            sound.play();
+        }
+
+        function drawHUD() {
+            ctx.fillStyle = '#0f0';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}  Scrap: ${orkShip.scrap}  Health: ${orkShip.health}`, 10, 30);
+            ctx.fillText(`WAAAGH!: ${waaghMeter}%  Level: ${level}  Wave: ${wave}`, 10, 60);
+            ctx.drawImage(images.orkProjectile, canvas.width - 100, canvas.height - 60, 50, 50); // Draw ammo image
+            ctx.fillText(`${orkShip.ammo}`, canvas.width - 50, canvas.height - 30); // Ammo counter
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Add some stars
+            for (let i = 0; i < 100; i++) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+            }
+        }
+
+        function updateMovement() {
+            if (keys['ArrowUp'] || keys['w']) {
+                orkShip.y = Math.max(0, orkShip.y - orkShip.speed);
+            }
+            if (keys['ArrowDown'] || keys['s']) {
+                orkShip.y = Math.min(canvas.height - orkShip.height, orkShip.y + orkShip.speed);
+            }
+            if (keys['ArrowLeft'] || keys['a']) {
+                orkShip.x = Math.max(0, orkShip.x - orkShip.speed);
+            }
+            if (keys['ArrowRight'] || keys['d']) {
+                orkShip.x = Math.min(canvas.width - orkShip.width, orkShip.x + orkShip.speed);
+            }
+        }
+
+        function updateShooting() {
+            if (shooting && (orkShip.ammo > 0 || orkShip.waaaghActive)) {
+                const angle = calculateAngle(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2, mousePos.x, mousePos.y);
+                for (let i = 0; i < orkShip.shootas; i++) {
+                    bullets.push({
+                        x: orkShip.x + orkShip.width / 2,
+                        y: orkShip.y + orkShip.height / 2,
+                        width: 40,  // Adjusted to double size
+                        height: 40,  // Adjusted to double size
+                        image: images.orkProjectile,
+                        angle: angle // Shoot towards the mouse
+                    });
+                }
+                if (!orkShip.waaaghActive) {
+                    orkShip.ammo--;
+                }
+                if (!fireSoundPlaying) {
+                    fireSound.play();
+                    fireSoundPlaying = true;
+                }
+            } else {
+                if (fireSoundPlaying) {
+                    fireSound.pause();
+                    fireSound.currentTime = 0; // Reset to start
+                    fireSoundPlaying = false;
+                }
+            }
+        }
+
+        function screenShake(duration) {
+            screenShakeDuration = duration;
+        }
+
+        function applyScreenShake() {
+            if (screenShakeDuration > 0) {
+                const shakeMagnitude = 5;
+                const shakeX = (Math.random() - 0.5) * shakeMagnitude;
+                const shakeY = (Math.random() - 0.5) * shakeMagnitude;
+                ctx.translate(shakeX, shakeY);
+                screenShakeDuration--;
+            }
+        }
+
+        function gameLoop() {
+            ctx.save();  // Save the current state before applying screen shake
+            applyScreenShake();
+
+            if (gameState === 'playing') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawBackground();
+                drawOrkShip();
+                drawEnemies();
+                drawBullets();
+                drawEnemyBullets();
+                drawParticles();
+                drawExplosions();
+                drawHUD();
+                
+                updateMovement();
+                updateShooting();
+                moveEnemies();
+                moveBullets();
+                moveEnemyBullets();
+                moveParticles();
+                moveExplosions();
+                spawnEnemy();
+                enemyShoot();
+                checkCollisions();
+                
+                if (waaghMeter >= 100) {
+                    activateWaaagh();
+                }
+            } else if (gameState === 'gameOver') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawBackground();
+                ctx.fillStyle = 'red';
+                ctx.font = '40px Arial';
+                ctx.fillText('GAME OVER, YA GIT!', canvas.width / 2 - 150, canvas.height / 2);
+                document.getElementById('gameOverMenu').style.display = 'block';
+            }
+
+            ctx.restore();  // Restore the state after applying screen shake
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function activateWaaagh() {
+            orkShip.waaaghActive = true;
+            orkShip.color = 'red';
+            orkShip.speed = orkShip.originalSpeed * 2;
+            orkShip.ammo = Infinity; // Unlimited ammo during Waaagh
+            setTimeout(() => {
+                orkShip.color = 'green';
+                orkShip.speed = orkShip.originalSpeed;
+                orkShip.waaaghActive = false;
+                orkShip.ammo = 100; // Reset ammo after Waaagh
+                waaghMeter = 0;
+            }, 5000);
+        }
+
+        function showUpgradeMenu() {
+            document.getElementById('upgradeMenu').style.display = 'block';
+        }
+        function upgradeShootas() {
+            if (orkShip.scrap >= 10) {
+                orkShip.shootas++;
+                orkShip.scrap -= 10;
+                updateUpgradeMenu();
+            }
+        }
+
+        function upgradeArma() {
+            if (orkShip.scrap >= 15) {
+                orkShip.arma++;
+                orkShip.scrap -= 15;
+                updateUpgradeMenu();
+            }
+        }
+
+        function upgradeSpeed() {
+            if (orkShip.scrap >= 5) {
+                orkShip.speed++;
+                orkShip.scrap -= 5;
+                updateUpgradeMenu();
+            }
+        }
+
+        function updateUpgradeMenu() {
+            // Update button states based on available scrap
+        }
+
+        function startNextWave() {
+            document.getElementById('upgradeMenu').style.display = 'none';
+            gameState = 'playing';
+            enemiesRemainingInWave = wave * 5; // Increase the number of enemies per wave
+            wave++;
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            // Reset game state
+            orkShip.x = canvas.width / 2;
+            orkShip.y = canvas.height - 100;
+            orkShip.width = 60;  // Doubled the width
+            orkShip.height = 80; // Doubled the height
+            orkShip.color = 'green';
+            orkShip.speed = 5;
+            orkShip.shootas = 1;
+            orkShip.arma = 0;
+            orkShip.scrap = 0;
+            orkShip.health = 100;
+            orkShip.ammo = 100;
+            orkShip.waaaghActive = false;
+            orkShip.waaaghSpeedBoost = 2;
+            orkShip.originalSpeed = 5;
+            orkShip.waaaghAmmoBoost = false;
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            particles = [];
+            explosions = [];
+            score = 0;
+            level = 1;
+            wave = 1;
+            waaghMeter = 0;
+            enemiesRemainingInWave = wave * 5; // Initial number of enemies
+            gameState = 'playing';
+        }
+
+        // Calculate angle to rotate the ship towards the mouse
+        function calculateAngle(x1, y1, x2, y2) {
+            return Math.atan2(y2 - y1, x2 - x1);
+        }
+
+        document.addEventListener('mousemove', (event) => {
+            mousePos.x = event.clientX;
+            mousePos.y = event.clientY;
+            orkShip.angle = calculateAngle(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2, mousePos.x, mousePos.y) + Math.PI;
+        });
+
+        document.addEventListener('mousedown', (event) => {
+            if (event.button === 0 && gameState === 'playing') { // Left mouse button
+                shooting = true;
+            }
+        });
+
+        document.addEventListener('mouseup', (event) => {
+            if (event.button === 0) { // Left mouse button
+                shooting = false;
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            keys[event.key] = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            keys[event.key] = false;
+        });
+
+        restartGame(); // Initialize the game state
+        gameLoop(); // Start the game loop
+    </script>
+</body>
+</html>
