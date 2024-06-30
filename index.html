@@ -92,7 +92,8 @@
             orkProjectile: new Image(),
             shipExplosion: new Image(),
             projectileExplosion: new Image(),
-            orkShip: new Image() // Added orkShip image
+            orkShip: new Image(),
+            waaaghShip: new Image()
         };
         images.humie.src = 'https://i.imgur.com/qGd6kKm.png';
         images.pointyEar.src = 'https://i.imgur.com/2385clh.png';
@@ -106,10 +107,12 @@
         images.shipExplosion.src = 'https://i.imgur.com/xJzytnV.png'; // Ship explosion sprite sheet
         images.projectileExplosion.src = 'https://i.imgur.com/fP4DBiR.png'; // Projectile explosion sprite sheet
         images.orkShip.src = 'https://i.imgur.com/uUcrlVb.png'; // Load orkShip image
+        images.waaaghShip.src = 'https://i.imgur.com/Rlt3p1z.png'; // Load waaaghShip image
 
         // Load sounds
         const fireSound = new Audio('https://cdn.freesound.org/previews/239/239596_109726-lq.mp3');
         fireSound.loop = true;  // Ensure the sound can loop
+        const waaaghSound = new Audio('https://cdn.freesound.org/previews/371/371211_6907558-lq.mp3'); // Waaagh activation sound
 
         // Ork Ship
         const orkShip = {
@@ -117,6 +120,7 @@
             y: canvas.height - 100,
             width: 60,  // Doubled the width
             height: 80, // Doubled the height
+            image: images.orkShip,
             color: 'green',
             speed: 5,
             shootas: 1,
@@ -165,7 +169,7 @@
             ctx.rotate(orkShip.angle);
             ctx.translate(-orkShip.width / 2, -orkShip.height / 2);
 
-            ctx.drawImage(images.orkShip, 0, 0, orkShip.width, orkShip.height);
+            ctx.drawImage(orkShip.image, 0, 0, orkShip.width, orkShip.height);
 
             ctx.restore();
         }
@@ -234,7 +238,7 @@
                     const bulletDx = bullet.x - enemy.x;
                     const bulletDy = bullet.y - enemy.y;
                     const bulletDist = Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy);
-                    if (bulletDist < 100) { // Adjust this value as needed
+                    if (bulletDist < 200) { // Increased detection radius
                         avoidDx -= bulletDx / bulletDist;
                         avoidDy -= bulletDy / bulletDist;
                     }
@@ -243,8 +247,8 @@
                 // Normalize avoidance vector
                 const avoidDist = Math.sqrt(avoidDx * avoidDx + avoidDy * avoidDy);
                 if (avoidDist > 0) {
-                    avoidDx = (avoidDx / avoidDist) * enemy.speed;
-                    avoidDy = (avoidDy / avoidDist) * enemy.speed;
+                    avoidDx = (avoidDx / avoidDist) * enemy.speed * 1.5; // Increased avoidance maneuver
+                    avoidDy = (avoidDy / avoidDist) * enemy.speed * 1.5; // Increased avoidance maneuver
                 }
 
                 // Combine movement towards player and avoidance
@@ -392,6 +396,7 @@
                     createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
                     if (orkShip.health <= 0) {
                         gameState = 'gameOver';
+                        document.getElementById('gameOverMenu').style.display = 'block';
                     }
                 }
             });
@@ -422,6 +427,7 @@
                     createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
                     if (orkShip.health <= 0) {
                         gameState = 'gameOver';
+                        document.getElementById('gameOverMenu').style.display = 'block';
                     }
                 }
             });
@@ -575,16 +581,20 @@
 
         function activateWaaagh() {
             orkShip.waaaghActive = true;
+            orkShip.image = images.waaaghShip;
             orkShip.color = 'red';
             orkShip.speed = orkShip.originalSpeed * 2;
-            orkShip.ammo = Infinity; // Unlimited ammo during Waaagh
-            setTimeout(() => {
-                orkShip.color = 'green';
-                orkShip.speed = orkShip.originalSpeed;
-                orkShip.waaaghActive = false;
-                orkShip.ammo = 100; // Reset ammo after Waaagh
-                waaghMeter = 0;
-            }, 5000);
+            waaaghSound.play(); // Play Waaagh activation sound
+            setTimeout(deactivateWaaagh, 5000); // Use a separate function to handle Waaagh deactivation
+        }
+
+        function deactivateWaaagh() {
+            orkShip.image = images.orkShip;
+            orkShip.color = 'green';
+            orkShip.speed = orkShip.originalSpeed;
+            orkShip.waaaghActive = false;
+            orkShip.ammo += 100; // Increase ammo by 100 after Waaagh
+            waaghMeter = 0;
         }
 
         function showUpgradeMenu() {
@@ -632,6 +642,7 @@
             orkShip.y = canvas.height - 100;
             orkShip.width = 60;  // Doubled the width
             orkShip.height = 80; // Doubled the height
+            orkShip.image = images.orkShip; // Reset to original image
             orkShip.color = 'green';
             orkShip.speed = 5;
             orkShip.shootas = 1;
