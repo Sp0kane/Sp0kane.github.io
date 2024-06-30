@@ -93,7 +93,9 @@
             shipExplosion: new Image(),
             projectileExplosion: new Image(),
             orkShip: new Image(),
-            waaaghShip: new Image()
+            waaaghShip: new Image(),
+            bomb: new Image(),
+            explodedBomb: new Image()
         };
         images.humie.src = 'https://i.imgur.com/qGd6kKm.png';
         images.pointyEar.src = 'https://i.imgur.com/2385clh.png';
@@ -108,11 +110,14 @@
         images.projectileExplosion.src = 'https://i.imgur.com/fP4DBiR.png'; // Projectile explosion sprite sheet
         images.orkShip.src = 'https://i.imgur.com/uUcrlVb.png'; // Load orkShip image
         images.waaaghShip.src = 'https://i.imgur.com/Rlt3p1z.png'; // Load waaaghShip image
+        images.bomb.src = 'https://i.imgur.com/FxStkCk.png'; // Bomb image
+        images.explodedBomb.src = 'https://i.imgur.com/MhDUnb5.png'; // Bomb explosion sprite
 
         // Load sounds
         const fireSound = new Audio('https://cdn.freesound.org/previews/239/239596_109726-lq.mp3');
         fireSound.loop = true;  // Ensure the sound can loop
         const waaaghSound = new Audio('https://cdn.freesound.org/previews/371/371211_6907558-lq.mp3'); // Waaagh activation sound
+        const bombSound = new Audio('https://cdn.freesound.org/previews/741/741175_71257-lq.mp3'); // Bomb explosion sound
 
         // Ork Ship
         const orkShip = {
@@ -141,6 +146,7 @@
         let enemyBullets = [];
         let particles = [];
         let explosions = [];
+        let bombs = [];
         let score = 0;
         let level = 1;
         let wave = 1;
@@ -151,6 +157,7 @@
         // Movement and shooting
         let keys = {};
         let shooting = false;
+        let firingBomb = false;
         let fireSoundPlaying = false;
         let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
         let screenShakeDuration = 0;
@@ -225,6 +232,22 @@
             });
         }
 
+function drawBombs() {
+    bombs.forEach(bomb => {
+        if (!bomb.exploded) {
+            ctx.drawImage(images.bomb, bomb.x - bomb.width / 2, bomb.y - bomb.height / 2, bomb.width, bomb.height);
+        }
+
+        // Draw the effect radius outline
+        ctx.beginPath();
+        ctx.arc(bomb.x, bomb.y, bomb.radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'red'; // Color of the outline
+        ctx.lineWidth = 2; // Width of the outline
+        ctx.stroke();
+    });
+}
+
+
         function moveEnemies() {
             enemies.forEach(enemy => {
                 const dx = orkShip.x - enemy.x;
@@ -285,6 +308,27 @@
             });
         }
 
+function moveBombs() {
+    bombs.forEach((bomb, index) => {
+        bomb.x += bomb.speed * Math.cos(bomb.angle);
+        bomb.y += bomb.speed * Math.sin(bomb.angle);
+
+        // Calculate the distance bomb has traveled
+        const dx = bomb.x - bomb.initialX;
+        const dy = bomb.y - bomb.initialY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Check if bomb has traveled beyond a certain distance before exploding
+        if (dist > bomb.maxTravelDistance) {
+            bomb.exploded = true;
+            createExplosion(bomb.x, bomb.y, images.shipExplosion, 64, 64, 16, 'ship', bomb.radius);
+            bombSound.play();
+            bomb.exploding = true;
+        }
+    });
+}
+
+
         function moveParticles() {
             particles.forEach(particle => {
                 particle.x += particle.vx;
@@ -341,103 +385,127 @@
             });
         }
 
-        function checkCollisions() {
-            bullets.forEach(bullet => {
-                enemies.forEach(enemy => {
-                    if (bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y) {
-                        enemy.health -= 10 + orkShip.shootas * 2;
-                        bullets = bullets.filter(b => b !== bullet);
-                        createParticles(enemy.x, enemy.y, enemy.color);
-                        createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
-                        if (enemy.health <= 0) {
-                            enemies = enemies.filter(e => e !== enemy);
-                            score += 10;
-                            orkShip.scrap += 2;
-                            waaghMeter += 5;
-                            orkShip.ammo += 10; // Give ammo for each enemy destroyed
-                            screenShake(10); // Screen shake effect
-                        }
-                    }
-                });
-            });
-
-            enemyBullets.forEach(bullet => {
-                enemies.forEach(enemy => {
-                    if (enemy !== bullet.shooter && // Ensure the bullet doesn't immediately damage the shooter
-                        bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y) {
-                        enemy.health -= 10; // Adjust damage as necessary
-                        enemyBullets = enemyBullets.filter(b => b !== bullet);
-                        createParticles(enemy.x, enemy.y, enemy.color);
-                        createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
-                        if (enemy.health <= 0) {
-                            enemies = enemies.filter(e => e !== enemy);
-                            score += 10;
-                            orkShip.scrap += 2;
-                            waaghMeter += 5;
-                            orkShip.ammo += 10; // Give ammo for each enemy destroyed
-                            screenShake(10); // Screen shake effect
-                        }
-                    }
-                });
-
-                if (bullet.x < orkShip.x + orkShip.width &&
-                    bullet.x + bullet.width > orkShip.x &&
-                    bullet.y < orkShip.y + orkShip.height &&
-                    bullet.y + bullet.height > orkShip.y) {
-                    orkShip.health -= Math.max(bullet.width - orkShip.arma, 1); // Minimum damage of 1
-                    enemyBullets = enemyBullets.filter(b => b !== bullet);
-                    createParticles(orkShip.x, orkShip.y, 'red');
-                    createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
-                    if (orkShip.health <= 0) {
-                        gameState = 'gameOver';
-                        document.getElementById('gameOverMenu').style.display = 'block';
-                    }
-                }
-            });
-
-            bullets.forEach((bullet, bulletIndex) => {
-                enemyBullets.forEach((enemyBullet, enemyBulletIndex) => {
-                    if (bullet.x < enemyBullet.x + enemyBullet.width &&
-                        bullet.x + bullet.width > enemyBullet.x &&
-                        bullet.y < enemyBullet.y + enemyBullet.height &&
-                        bullet.y + bullet.height > enemyBullet.y) {
-                        bullets.splice(bulletIndex, 1);
-                        enemyBullets.splice(enemyBulletIndex, 1);
-                        createParticles((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, 'orange');
-                        createExplosion((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, images.projectileExplosion, 32, 32, 16, 'projectile');
-                    }
-                });
-            });
-
-            enemies.forEach(enemy => {
-                if (enemy.x < orkShip.x + orkShip.width &&
-                    enemy.x + enemy.width > orkShip.x &&
-                    enemy.y < orkShip.y + orkShip.height &&
-                    enemy.y + enemy.height > orkShip.y) {
-                    orkShip.health -= Math.max(enemy.damage - orkShip.arma, 1); // Minimum damage of 1
-                    orkShip.ammo += 10; // Refill ammo on collision
+function checkCollisions() {
+    bullets.forEach(bullet => {
+        enemies.forEach(enemy => {
+            if (bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + enemy.height > enemy.y) {
+                enemy.health -= 10 + orkShip.shootas * 2;
+                bullets = bullets.filter(b => b !== bullet);
+                createParticles(enemy.x, enemy.y, enemy.color);
+                createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
+                if (enemy.health <= 0) {
                     enemies = enemies.filter(e => e !== enemy);
-                    createParticles(orkShip.x, orkShip.y, 'red');
-                    createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
-                    if (orkShip.health <= 0) {
-                        gameState = 'gameOver';
-                        document.getElementById('gameOverMenu').style.display = 'block';
-                    }
+                    score += 10;
+                    orkShip.scrap += 2;
+                    waaghMeter += 5;
+                    orkShip.ammo += 10; // Give ammo for each enemy destroyed
+                    screenShake(10); // Screen shake effect
                 }
-            });
+            }
+        });
+    });
 
-            // Check for level completion
-            if (enemiesRemainingInWave === 0 && enemies.length === 0) {
-                gameState = 'upgrading';
-                showUpgradeMenu();
+    enemyBullets.forEach(bullet => {
+        enemies.forEach(enemy => {
+            if (enemy !== bullet.shooter && // Ensure the bullet doesn't immediately damage the shooter
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y) {
+                enemy.health -= 10; // Adjust damage as necessary
+                enemyBullets = enemyBullets.filter(b => b !== bullet);
+                createParticles(enemy.x, enemy.y, enemy.color);
+                createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
+                if (enemy.health <= 0) {
+                    enemies = enemies.filter(e => e !== enemy);
+                    score += 10;
+                    orkShip.scrap += 2;
+                    waaghMeter += 5;
+                    orkShip.ammo += 10; // Give ammo for each enemy destroyed
+                    screenShake(10); // Screen shake effect
+                }
+            }
+        });
+
+        if (bullet.x < orkShip.x + orkShip.width &&
+            bullet.x + bullet.width > orkShip.x &&
+            bullet.y < orkShip.y + orkShip.height &&
+            bullet.y + bullet.height > orkShip.y) {
+            orkShip.health -= Math.max(bullet.width - orkShip.arma, 1); // Minimum damage of 1
+            enemyBullets = enemyBullets.filter(b => b !== bullet);
+            createParticles(orkShip.x, orkShip.y, 'red');
+            createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
+            if (orkShip.health <= 0) {
+                gameState = 'gameOver';
+                document.getElementById('gameOverMenu').style.display = 'block';
             }
         }
+    });
+
+    bullets.forEach((bullet, bulletIndex) => {
+        enemyBullets.forEach((enemyBullet, enemyBulletIndex) => {
+            if (bullet.x < enemyBullet.x + enemyBullet.width &&
+                bullet.x + bullet.width > enemyBullet.x &&
+                bullet.y < enemyBullet.y + enemyBullet.height &&
+                bullet.y + bullet.height > enemyBullet.y) {
+                bullets.splice(bulletIndex, 1);
+                enemyBullets.splice(enemyBulletIndex, 1);
+                createParticles((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, 'orange');
+                createExplosion((bullet.x + enemyBullet.x) / 2, (bullet.y + enemyBullet.y) / 2, images.projectileExplosion, 32, 32, 16, 'projectile');
+            }
+        });
+    });
+
+    enemies.forEach(enemy => {
+        if (enemy.x < orkShip.x + orkShip.width &&
+            enemy.x + enemy.width > orkShip.x &&
+            enemy.y < orkShip.y + orkShip.height &&
+            enemy.y + enemy.height > orkShip.y) {
+            orkShip.health -= Math.max(enemy.damage - orkShip.arma, 1); // Minimum damage of 1
+            orkShip.ammo += 10; // Refill ammo on collision
+            enemies = enemies.filter(e => e !== enemy);
+            createParticles(orkShip.x, orkShip.y, 'red');
+            createExplosion(orkShip.x, orkShip.y, images.shipExplosion, 64, 64, 16, 'ship');
+            if (orkShip.health <= 0) {
+                gameState = 'gameOver';
+                document.getElementById('gameOverMenu').style.display = 'block';
+            }
+        }
+    });
+
+    bombs.forEach((bomb, index) => {
+        if (bomb.exploded) {
+            enemies.forEach(enemy => {
+                const dx = bomb.x - enemy.x;
+                const dy = bomb.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < bomb.radius) {
+                    enemy.health = 0; // Instant kill
+                    createParticles(enemy.x, enemy.y, enemy.color);
+                    createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
+                    enemies = enemies.filter(e => e !== enemy);
+                    score += 10;
+                    orkShip.scrap += 2;
+                    waaghMeter += 5;
+                    orkShip.ammo += 10; // Give ammo for each enemy destroyed
+                    screenShake(10); // Screen shake effect
+                }
+            });
+            // Remove bomb from array after checking for collisions
+            bombs.splice(index, 1);
+        }
+    });
+
+    // Check for level completion
+    if (enemiesRemainingInWave === 0 && enemies.length === 0) {
+        gameState = 'upgrading';
+        showUpgradeMenu();
+    }
+}
+
 
         function createParticles(x, y, color) {
             for (let i = 0; i < 20; i++) {
@@ -453,8 +521,8 @@
             }
         }
 
-        function createExplosion(x, y, image, frameWidth, frameHeight, totalFrames, type) {
-            explosions.push({ x: x, y: y, image: image, frame: 0, frameWidth: frameWidth, frameHeight: frameHeight, totalFrames: totalFrames });
+        function createExplosion(x, y, image, frameWidth, frameHeight, totalFrames, type, radius = 0) {
+            explosions.push({ x: x, y: y, image: image, frame: 0, frameWidth: frameWidth, frameHeight: frameHeight, totalFrames: totalFrames, radius: radius });
             const sound = new Audio(type === 'ship' ? 'https://cdn.freesound.org/previews/609/609587_1038806-lq.mp3' : 'https://cdn.freesound.org/previews/609/609588_1038806-lq.mp3');
             sound.play();
         }
@@ -493,34 +561,54 @@
             }
         }
 
-        function updateShooting() {
-            if (shooting && (orkShip.ammo > 0 || orkShip.waaaghActive)) {
-                const angle = calculateAngle(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2, mousePos.x, mousePos.y);
-                for (let i = 0; i < orkShip.shootas; i++) {
-                    bullets.push({
-                        x: orkShip.x + orkShip.width / 2,
-                        y: orkShip.y + orkShip.height / 2,
-                        width: 40,  // Adjusted to double size
-                        height: 40,  // Adjusted to double size
-                        image: images.orkProjectile,
-                        angle: angle // Shoot towards the mouse
-                    });
-                }
-                if (!orkShip.waaaghActive) {
-                    orkShip.ammo--;
-                }
-                if (!fireSoundPlaying) {
-                    fireSound.play();
-                    fireSoundPlaying = true;
-                }
-            } else {
-                if (fireSoundPlaying) {
-                    fireSound.pause();
-                    fireSound.currentTime = 0; // Reset to start
-                    fireSoundPlaying = false;
-                }
-            }
+function updateShooting() {
+    if (shooting && (orkShip.ammo > 0 || orkShip.waaaghActive)) {
+        const angle = calculateAngle(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2, mousePos.x, mousePos.y);
+        for (let i = 0; i < orkShip.shootas; i++) {
+            bullets.push({
+                x: orkShip.x + orkShip.width / 2,
+                y: orkShip.y + orkShip.height / 2,
+                width: 40,  // Adjusted to double size
+                height: 40,  // Adjusted to double size
+                image: images.orkProjectile,
+                angle: angle // Shoot towards the mouse
+            });
         }
+        if (!orkShip.waaaghActive) {
+            orkShip.ammo--;
+        }
+        if (!fireSoundPlaying) {
+            fireSound.play();
+            fireSoundPlaying = true;
+        }
+    } else {
+        if (fireSoundPlaying) {
+            fireSound.pause();
+            fireSound.currentTime = 0; // Reset to start
+            fireSoundPlaying = false;
+        }
+    }
+
+    if (firingBomb && orkShip.ammo >= 1000) {
+        const angle = calculateAngle(orkShip.x + orkShip.width / 2, orkShip.y + orkShip.height / 2, mousePos.x, mousePos.y);
+        bombs.push({
+            x: orkShip.x + orkShip.width / 2,
+            y: orkShip.y,
+            initialX: orkShip.x + orkShip.width / 2, // Initial position
+            initialY: orkShip.y, // Initial position
+            width: 50,
+            height: 50,
+            speed: 5,
+            angle: angle, // Direction towards the mouse
+            radius: canvas.width / 10, // Halved explosion radius
+            maxTravelDistance: 300, // Set the max travel distance before detonation
+            exploded: false,
+            exploding: false
+        });
+        orkShip.ammo -= 1000;
+        firingBomb = false; // Set firingBomb to false after firing a bomb
+    }
+}
 
         function screenShake(duration) {
             screenShakeDuration = duration;
@@ -549,6 +637,7 @@
                 drawEnemyBullets();
                 drawParticles();
                 drawExplosions();
+                drawBombs();
                 drawHUD();
                 
                 updateMovement();
@@ -556,6 +645,7 @@
                 moveEnemies();
                 moveBullets();
                 moveEnemyBullets();
+                moveBombs();
                 moveParticles();
                 moveExplosions();
                 spawnEnemy();
@@ -568,9 +658,6 @@
             } else if (gameState === 'gameOver') {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 drawBackground();
-                ctx.fillStyle = 'red';
-                ctx.font = '40px Arial';
-                ctx.fillText('GAME OVER, YA GIT!', canvas.width / 2 - 150, canvas.height / 2);
                 document.getElementById('gameOverMenu').style.display = 'block';
             }
 
@@ -657,6 +744,7 @@
             enemies = [];
             bullets = [];
             enemyBullets = [];
+            bombs = [];
             particles = [];
             explosions = [];
             score = 0;
@@ -681,6 +769,8 @@
         document.addEventListener('mousedown', (event) => {
             if (event.button === 0 && gameState === 'playing') { // Left mouse button
                 shooting = true;
+            } else if (event.button === 2 && gameState === 'playing') { // Right mouse button
+                firingBomb = true;
             }
         });
 
@@ -696,6 +786,10 @@
 
         document.addEventListener('keyup', (event) => {
             keys[event.key] = false;
+        });
+
+        document.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
         });
 
         restartGame(); // Initialize the game state
