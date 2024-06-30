@@ -226,8 +226,30 @@
                 const dx = orkShip.x - enemy.x;
                 const dy = orkShip.y - enemy.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                enemy.vx = (dx / dist) * enemy.speed;
-                enemy.vy = (dy / dist) * enemy.speed;
+                let avoidDx = 0;
+                let avoidDy = 0;
+
+                // Calculate avoidance vector for each bullet
+                bullets.forEach(bullet => {
+                    const bulletDx = bullet.x - enemy.x;
+                    const bulletDy = bullet.y - enemy.y;
+                    const bulletDist = Math.sqrt(bulletDx * bulletDx + bulletDy * bulletDy);
+                    if (bulletDist < 100) { // Adjust this value as needed
+                        avoidDx -= bulletDx / bulletDist;
+                        avoidDy -= bulletDy / bulletDist;
+                    }
+                });
+
+                // Normalize avoidance vector
+                const avoidDist = Math.sqrt(avoidDx * avoidDx + avoidDy * avoidDy);
+                if (avoidDist > 0) {
+                    avoidDx = (avoidDx / avoidDist) * enemy.speed;
+                    avoidDy = (avoidDy / avoidDist) * enemy.speed;
+                }
+
+                // Combine movement towards player and avoidance
+                enemy.vx = ((dx / dist) * enemy.speed + avoidDx) / 2;
+                enemy.vy = ((dy / dist) * enemy.speed + avoidDy) / 2;
                 enemy.x += enemy.vx;
                 enemy.y += enemy.vy;
                 enemy.angle = Math.atan2(enemy.vy, enemy.vx) + Math.PI / 2;
@@ -308,7 +330,8 @@
                         height: enemy.bulletSize,  // Adjust as necessary for projectile size
                         image: enemy.projectile,
                         speed: 5,
-                        angle: angle
+                        angle: angle,
+                        shooter: enemy // Track the shooter
                     });
                 }
             });
@@ -338,6 +361,27 @@
             });
 
             enemyBullets.forEach(bullet => {
+                enemies.forEach(enemy => {
+                    if (enemy !== bullet.shooter && // Ensure the bullet doesn't immediately damage the shooter
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        enemy.health -= 10; // Adjust damage as necessary
+                        enemyBullets = enemyBullets.filter(b => b !== bullet);
+                        createParticles(enemy.x, enemy.y, enemy.color);
+                        createExplosion(enemy.x, enemy.y, images.shipExplosion, 64, 64, 16, 'ship');
+                        if (enemy.health <= 0) {
+                            enemies = enemies.filter(e => e !== enemy);
+                            score += 10;
+                            orkShip.scrap += 2;
+                            waaghMeter += 5;
+                            orkShip.ammo += 10; // Give ammo for each enemy destroyed
+                            screenShake(10); // Screen shake effect
+                        }
+                    }
+                });
+
                 if (bullet.x < orkShip.x + orkShip.width &&
                     bullet.x + bullet.width > orkShip.x &&
                     bullet.y < orkShip.y + orkShip.height &&
