@@ -5,9 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WAAAGH! Space Shoota!</title>
     <style>
-        canvas { border: 1px solid black; display: block; margin: 0 auto; }
-        body { font-family: Arial, sans-serif; background-color: #222; color: #0f0; overflow: hidden; margin: 0; padding: 0; }
-        #startScreen, #upgradeMenu, #gameOverMenu { display: none; }
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #0f0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        #startScreen, #upgradeMenu, #gameOverMenu {
+            display: none;
+        }
         #startScreen, #upgradeMenu, #gameOverMenu {
             position: absolute;
             top: 50%;
@@ -20,10 +35,11 @@
             background-color: #444;
             color: #0f0;
             border: 2px solid #0f0;
-            padding: 10px;
+            padding: 15px;
             margin: 5px;
             cursor: pointer;
             font-family: 'Arial', sans-serif;
+            font-size: 1.2em;
         }
         #startScreen button:hover, #upgradeMenu button:hover, #gameOverMenu button:hover {
             background-color: #666;
@@ -38,7 +54,7 @@
             color: #fff;
         }
         #instructions {
-            font-size: 18px;
+            font-size: 16px;
             color: #fff;
             text-align: left;
             margin-bottom: 20px;
@@ -51,14 +67,13 @@
         <h1>WAAAGH! Space Shoota!</h1>
         <div id="instructions">
             <p><strong>Instructions:</strong></p>
-<ul>
-    <li>Move wit <strong>WASD</strong> or <strong>Arrow Keys</strong></li>
-    <li>Hold <strong>Shift</strong> ta go fasta (uses Guzzle)</li>
-    <li>Left click ta shoot</li>
-    <li>Right click ta drop a bomb (costs ammo)</li>
-    <li>Grab scrap from dead enemies ta upgrade yer ship</li>
-</ul>
-
+            <ul>
+                <li>Move wit <strong>WASD</strong> or <strong>Arrow Keys</strong></li>
+                <li>Hold <strong>Shift</strong> ta go fasta (uses Guzzle)</li>
+                <li>Left click ta shoot</li>
+                <li>Right click ta drop a bomb (costs ammo)</li>
+                <li>Grab scrap from dead enemies ta upgrade yer ship</li>
+            </ul>
         </div>
         <button onclick="startGame()">LET'S WAAAGH!</button>
     </div>
@@ -828,55 +843,55 @@
             ctx.fillText(`Guzzle: ${Math.floor(orkShip.guzzle)}`, 10, 90); // Display Guzzle meter
         }
 
-function startNextWave() {
-    document.getElementById('upgradeMenu').style.display = 'none';
-    gameState = 'playing';
-    enemiesRemainingInWave = wave * 5; // Increase the number of enemies per wave
-    wave++;
-    orkShip.guzzle = 100; // Reset Guzzle meter
-    orkShip.health = 100; // Reset health
-    updateHUD();
-}
+        function startNextWave() {
+            document.getElementById('upgradeMenu').style.display = 'none';
+            gameState = 'playing';
+            enemiesRemainingInWave = wave * 5; // Increase the number of enemies per wave
+            wave++;
+            orkShip.guzzle = 100; // Reset Guzzle meter
+            orkShip.health = 100; // Reset health
+            updateHUD();
+        }
 
-function restartGame() {
-    document.getElementById('gameOverMenu').style.display = 'none';
-    // Reset game state
-    orkShip.x = canvas.width / 2;
-    orkShip.y = canvas.height - 100;
-    orkShip.width = 60;  // Doubled the width
-    orkShip.height = 80; // Doubled the height
-    orkShip.image = images.orkShip; // Reset to original image
-    orkShip.color = 'green';
-    orkShip.speed = orkShip.originalSpeed; // Ensure speed is set to originalSpeed
-    orkShip.shootas = 1;
-    orkShip.arma = 0;
-    orkShip.scrap = 0;
-    orkShip.health = 100;
-    orkShip.ammo = 100;
-    orkShip.waaaghActive = false;
-    orkShip.waaaghSpeedBoost = 2;
-    orkShip.originalSpeed = 5;
-    orkShip.waaaghAmmoBoost = false;
-    orkShip.waaaghAmmoGranted = false; // Reset flag
-    orkShip.guzzle = 100; // Reset Guzzle meter
-    enemies = [];
-    bullets = [];
-    enemyBullets = [];
-    bombs = [];
-    particles = [];
-    explosions = [];
-    score = 0;
-    level = 1;
-    wave = 1;
-    waaghMeter = 0;
-    enemiesRemainingInWave = wave * 5; // Initial number of enemies
-    gameState = 'playing';
+        function restartGame() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            // Reset game state
+            orkShip.x = canvas.width / 2;
+            orkShip.y = canvas.height - 100;
+            orkShip.width = 60;  // Doubled the width
+            orkShip.height = 80; // Doubled the height
+            orkShip.image = images.orkShip; // Reset to original image
+            orkShip.color = 'green';
+            orkShip.speed = orkShip.originalSpeed; // Ensure speed is set to originalSpeed
+            orkShip.shootas = 1;
+            orkShip.arma = 0;
+            orkShip.scrap = 0;
+            orkShip.health = 100;
+            orkShip.ammo = 100;
+            orkShip.waaaghActive = false;
+            orkShip.waaaghSpeedBoost = 2;
+            orkShip.originalSpeed = 5;
+            orkShip.waaaghAmmoBoost = false;
+            orkShip.waaaghAmmoGranted = false; // Reset flag
+            orkShip.guzzle = 100; // Reset Guzzle meter
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            bombs = [];
+            particles = [];
+            explosions = [];
+            score = 0;
+            level = 1;
+            wave = 1;
+            waaghMeter = 0;
+            enemiesRemainingInWave = wave * 5; // Initial number of enemies
+            gameState = 'playing';
 
-    // Initialize the scrap display
-    updateHUD();
+            // Initialize the scrap display
+            updateHUD();
 
-    gameLoop(); // Start the game loop
-}
+            gameLoop(); // Start the game loop
+        }
 
         // Calculate angle to rotate the ship towards the mouse
         function calculateAngle(x1, y1, x2, y2) {
@@ -915,11 +930,74 @@ function restartGame() {
             event.preventDefault();
         });
 
-function startGame() {
-    document.getElementById('startScreen').style.display = 'none';
-    gameState = 'playing';
-    restartGame();
-}
+        // Touch event listeners
+        document.addEventListener('touchstart', handleTouchStart, false);
+        document.addEventListener('touchmove', handleTouchMove, false);
+        document.addEventListener('touchend', handleTouchEnd, false);
+
+        let touchStartX = null;
+        let touchStartY = null;
+
+        function handleTouchStart(event) {
+            const touch = event.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+
+            // Detect touch areas for movement
+            if (touchStartX < window.innerWidth / 2) {
+                // Left side for movement
+                keys['ArrowUp'] = true;
+            } else {
+                // Right side for shooting
+                shooting = true;
+            }
+        }
+
+        function handleTouchMove(event) {
+            if (!touchStartX || !touchStartY) return;
+
+            const touch = event.touches[0];
+            const touchMoveX = touch.clientX;
+            const touchMoveY = touch.clientY;
+
+            const dx = touchMoveX - touchStartX;
+            const dy = touchMoveY - touchStartY;
+
+            if (dx > 50) {
+                // Right swipe
+                keys['ArrowRight'] = true;
+                keys['ArrowLeft'] = false;
+            } else if (dx < -50) {
+                // Left swipe
+                keys['ArrowLeft'] = true;
+                keys['ArrowRight'] = false;
+            }
+
+            if (dy > 50) {
+                // Down swipe
+                keys['ArrowDown'] = true;
+                keys['ArrowUp'] = false;
+            } else if (dy < -50) {
+                // Up swipe
+                keys['ArrowUp'] = true;
+                keys['ArrowDown'] = false;
+            }
+        }
+
+        function handleTouchEnd(event) {
+            // Reset movement keys on touch end
+            keys['ArrowUp'] = false;
+            keys['ArrowDown'] = false;
+            keys['ArrowLeft'] = false;
+            keys['ArrowRight'] = false;
+            shooting = false;
+        }
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            gameState = 'playing';
+            restartGame();
+        }
 
         // Show start screen on load
         document.getElementById('startScreen').style.display = 'block';
