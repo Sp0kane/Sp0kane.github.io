@@ -165,6 +165,16 @@
             isBoosting: false // Add boosting state
         };
 
+        // Detect if the user is on a mobile device
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop|BlackBerry/i.test(navigator.userAgent);
+        }
+
+        const isMobileDevice = isMobile();
+
+        // Adjust speeds for mobile devices
+        const speedMultiplier = isMobileDevice ? 0.5 : 1;
+
         // Game state
         let enemies = [];
         let bullets = [];
@@ -190,10 +200,10 @@
 
         // Enemy types
         const enemyTypes = [
-            { name: 'Humie', image: images.humie, health: 30, speed: 3, width: 34, height: 51, damage: 5, shootChance: 0.01, bulletSize: 20, projectile: images.humieProjectile },
-            { name: 'Pointy-Ear', image: images.pointyEar, health: 20, speed: 6, width: 26, height: 42.5, damage: 3, shootChance: 0.02, bulletSize: 16, projectile: images.pointyEarProjectile },
-            { name: 'Tin-\'Ead', image: images.tinEad, health: 50, speed: 1.5, width: 42.5, height: 59.5, damage: 10, shootChance: 0.005, bulletSize: 24, projectile: images.tinEadProjectile },
-            { name: 'Space Nasty', image: images.spaceNasty, health: 40, speed: 4.5, width: 51, height: 68, damage: 7, shootChance: 0.015, bulletSize: 28, projectile: images.spaceNastyProjectile }
+            { name: 'Humie', image: images.humie, health: 30, speed: 3 * speedMultiplier, width: 34, height: 51, damage: 5, shootChance: 0.01, bulletSize: 20, projectile: images.humieProjectile },
+            { name: 'Pointy-Ear', image: images.pointyEar, health: 20, speed: 6 * speedMultiplier, width: 26, height: 42.5, damage: 3, shootChance: 0.02, bulletSize: 16, projectile: images.pointyEarProjectile },
+            { name: 'Tin-\'Ead', image: images.tinEad, health: 50, speed: 1.5 * speedMultiplier, width: 42.5, height: 59.5, damage: 10, shootChance: 0.005, bulletSize: 24, projectile: images.tinEadProjectile },
+            { name: 'Space Nasty', image: images.spaceNasty, health: 40, speed: 4.5 * speedMultiplier, width: 51, height: 68, damage: 7, shootChance: 0.015, bulletSize: 28, projectile: images.spaceNastyProjectile }
         ];
 
         function drawOrkShip() {
@@ -322,8 +332,8 @@
 
         function moveBullets() {
             bullets.forEach(bullet => {
-                bullet.x += 8.75 * Math.cos(bullet.angle); // Increased speed by 25%
-                bullet.y += 8.75 * Math.sin(bullet.angle); // Increased speed by 25%
+                bullet.x += 8.75 * speedMultiplier * Math.cos(bullet.angle); // Adjusted speed
+                bullet.y += 8.75 * speedMultiplier * Math.sin(bullet.angle); // Adjusted speed
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     bullets = bullets.filter(b => b !== bullet);
                 }
@@ -332,8 +342,8 @@
 
         function moveEnemyBullets() {
             enemyBullets.forEach(bullet => {
-                bullet.x += bullet.speed * 1.25 * Math.cos(bullet.angle); // Increased speed by 25%
-                bullet.y += bullet.speed * 1.25 * Math.sin(bullet.angle); // Increased speed by 25%
+                bullet.x += bullet.speed * 1.25 * speedMultiplier * Math.cos(bullet.angle); // Adjusted speed
+                bullet.y += bullet.speed * 1.25 * speedMultiplier * Math.sin(bullet.angle); // Adjusted speed
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     enemyBullets = enemyBullets.filter(b => b !== bullet);
                 }
@@ -342,8 +352,8 @@
 
         function moveBombs() {
             bombs.forEach((bomb, index) => {
-                bomb.x += bomb.speed * Math.cos(bomb.angle);
-                bomb.y += bomb.speed * Math.sin(bomb.angle);
+                bomb.x += bomb.speed * speedMultiplier * Math.cos(bomb.angle);
+                bomb.y += bomb.speed * speedMultiplier * Math.sin(bomb.angle);
 
                 // Calculate the distance bomb has traveled
                 const dx = bomb.x - bomb.initialX;
@@ -434,7 +444,7 @@
                         width: enemy.bulletSize,  // Adjust as necessary for projectile size
                         height: enemy.bulletSize,  // Adjust as necessary for projectile size
                         image: enemy.projectile,
-                        speed: 5,
+                        speed: 5 * speedMultiplier,  // Adjusted speed
                         angle: angle,
                         shooter: enemy // Track the shooter
                     });
@@ -632,14 +642,14 @@
         function updateMovement() {
             if (keys['Shift'] && orkShip.guzzle > 0) {
                 orkShip.isBoosting = true;
-                orkShip.speed = orkShip.originalSpeed * 2.2; // Increase speed by 120%
+                orkShip.speed = orkShip.originalSpeed * 2.2 * speedMultiplier; // Adjusted speed
                 orkShip.guzzle -= 0.5; // Decrease Guzzle meter
                 if (orkShip.guzzle < 0) {
                     orkShip.guzzle = 0;
                 }
             } else {
                 orkShip.isBoosting = false;
-                orkShip.speed = orkShip.originalSpeed;
+                orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
             }
 
             if (keys['ArrowUp'] || keys['w']) {
@@ -693,7 +703,7 @@
                     initialY: orkShip.y, // Initial position
                     width: 50,
                     height: 50,
-                    speed: 5,
+                    speed: 5 * speedMultiplier, // Adjusted speed
                     angle: angle, // Direction towards the mouse
                     radius: canvas.width / 10, // Halved explosion radius
                     maxTravelDistance: 300, // Set the max travel distance before detonation
@@ -777,7 +787,7 @@
             orkShip.waaaghActive = true;
             orkShip.image = images.waaaghShip;
             orkShip.color = 'red';
-            orkShip.speed = orkShip.originalSpeed * 2;
+            orkShip.speed = orkShip.originalSpeed * 2 * speedMultiplier; // Adjusted speed
             waaaghSound.play(); // Play Waaagh activation sound
             orkShip.waaaghAmmoGranted = false; // Reset the flag
             
@@ -789,7 +799,7 @@
         function deactivateWaaagh() {
             orkShip.image = images.orkShip;
             orkShip.color = 'green';
-            orkShip.speed = orkShip.originalSpeed;
+            orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
             orkShip.waaaghActive = false;
 
             // Check if ammo has already been granted for this Waaagh cycle
@@ -862,7 +872,7 @@
             orkShip.height = 80; // Doubled the height
             orkShip.image = images.orkShip; // Reset to original image
             orkShip.color = 'green';
-            orkShip.speed = orkShip.originalSpeed; // Ensure speed is set to originalSpeed
+            orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
             orkShip.shootas = 1;
             orkShip.arma = 0;
             orkShip.scrap = 0;
