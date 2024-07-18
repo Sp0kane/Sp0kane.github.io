@@ -59,36 +59,6 @@
             text-align: left;
             margin-bottom: 20px;
         }
-        #controls {
-            display: none;
-        }
-        @media (max-width: 768px) {
-            #controls {
-                position: absolute;
-                bottom: 0;
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-                z-index: 10;
-            }
-            .control-area {
-                width: 33%;
-                height: 100px;
-                background-color: rgba(0, 0, 0, 0.5);
-                border: 1px solid #0f0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            .control-area span {
-                color: #0f0;
-                font-size: 20px;
-                user-select: none;
-            }
-            .control-area:active {
-                background-color: rgba(0, 255, 0, 0.2);
-            }
-        }
     </style>
 </head>
 <body>
@@ -119,11 +89,6 @@
         <h2>GAME OVER, YA GIT!</h2>
         <button onclick="restartGame()">TRY AGAIN</button>
     </div>
-    <div id="controls">
-        <div id="moveArea" class="control-area"><span>Move</span></div>
-        <div id="guzzleArea" class="control-area"><span>Guzzle</span></div>
-        <div id="fireArea" class="control-area"><span>Fire</span></div>
-    </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -131,8 +96,6 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            orkShip.width = Math.max(canvas.width * 0.05, 60);  // Ensure a minimum width of 60
-            orkShip.height = Math.max(canvas.height * 0.08, 80); // Ensure a minimum height of 80
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -182,8 +145,8 @@
         const orkShip = {
             x: canvas.width / 2,
             y: canvas.height - 100,
-            width: canvas.width * 0.05,  // Scale width to screen size
-            height: canvas.height * 0.08, // Scale height to screen size
+            width: 60,  // Doubled the width
+            height: 80, // Doubled the height
             image: images.orkShip,
             color: 'green',
             speed: 5,
@@ -201,16 +164,6 @@
             guzzle: 100, // Add Guzzle meter
             isBoosting: false // Add boosting state
         };
-
-        // Detect if the user is on a mobile device
-        function isMobile() {
-            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop|BlackBerry/i.test(navigator.userAgent);
-        }
-
-        const isMobileDevice = isMobile();
-
-        // Adjust speeds for mobile devices
-        const speedMultiplier = isMobileDevice ? 0.5 : 1;
 
         // Game state
         let enemies = [];
@@ -237,10 +190,10 @@
 
         // Enemy types
         const enemyTypes = [
-            { name: 'Humie', image: images.humie, health: 30, speed: 3 * speedMultiplier, width: 34, height: 51, damage: 5, shootChance: 0.01, bulletSize: 20, projectile: images.humieProjectile },
-            { name: 'Pointy-Ear', image: images.pointyEar, health: 20, speed: 6 * speedMultiplier, width: 26, height: 42.5, damage: 3, shootChance: 0.02, bulletSize: 16, projectile: images.pointyEarProjectile },
-            { name: 'Tin-\'Ead', image: images.tinEad, health: 50, speed: 1.5 * speedMultiplier, width: 42.5, height: 59.5, damage: 10, shootChance: 0.005, bulletSize: 24, projectile: images.tinEadProjectile },
-            { name: 'Space Nasty', image: images.spaceNasty, health: 40, speed: 4.5 * speedMultiplier, width: 51, height: 68, damage: 7, shootChance: 0.015, bulletSize: 28, projectile: images.spaceNastyProjectile }
+            { name: 'Humie', image: images.humie, health: 30, speed: 3, width: 34, height: 51, damage: 5, shootChance: 0.01, bulletSize: 20, projectile: images.humieProjectile },
+            { name: 'Pointy-Ear', image: images.pointyEar, health: 20, speed: 6, width: 26, height: 42.5, damage: 3, shootChance: 0.02, bulletSize: 16, projectile: images.pointyEarProjectile },
+            { name: 'Tin-\'Ead', image: images.tinEad, health: 50, speed: 1.5, width: 42.5, height: 59.5, damage: 10, shootChance: 0.005, bulletSize: 24, projectile: images.tinEadProjectile },
+            { name: 'Space Nasty', image: images.spaceNasty, health: 40, speed: 4.5, width: 51, height: 68, damage: 7, shootChance: 0.015, bulletSize: 28, projectile: images.spaceNastyProjectile }
         ];
 
         function drawOrkShip() {
@@ -369,8 +322,8 @@
 
         function moveBullets() {
             bullets.forEach(bullet => {
-                bullet.x += 8.75 * speedMultiplier * Math.cos(bullet.angle); // Adjusted speed
-                bullet.y += 8.75 * speedMultiplier * Math.sin(bullet.angle); // Adjusted speed
+                bullet.x += 8.75 * Math.cos(bullet.angle); // Increased speed by 25%
+                bullet.y += 8.75 * Math.sin(bullet.angle); // Increased speed by 25%
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     bullets = bullets.filter(b => b !== bullet);
                 }
@@ -379,8 +332,8 @@
 
         function moveEnemyBullets() {
             enemyBullets.forEach(bullet => {
-                bullet.x += bullet.speed * 1.25 * speedMultiplier * Math.cos(bullet.angle); // Adjusted speed
-                bullet.y += bullet.speed * 1.25 * speedMultiplier * Math.sin(bullet.angle); // Adjusted speed
+                bullet.x += bullet.speed * 1.25 * Math.cos(bullet.angle); // Increased speed by 25%
+                bullet.y += bullet.speed * 1.25 * Math.sin(bullet.angle); // Increased speed by 25%
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     enemyBullets = enemyBullets.filter(b => b !== bullet);
                 }
@@ -389,8 +342,8 @@
 
         function moveBombs() {
             bombs.forEach((bomb, index) => {
-                bomb.x += bomb.speed * speedMultiplier * Math.cos(bomb.angle);
-                bomb.y += bomb.speed * speedMultiplier * Math.sin(bomb.angle);
+                bomb.x += bomb.speed * Math.cos(bomb.angle);
+                bomb.y += bomb.speed * Math.sin(bomb.angle);
 
                 // Calculate the distance bomb has traveled
                 const dx = bomb.x - bomb.initialX;
@@ -481,7 +434,7 @@
                         width: enemy.bulletSize,  // Adjust as necessary for projectile size
                         height: enemy.bulletSize,  // Adjust as necessary for projectile size
                         image: enemy.projectile,
-                        speed: 5 * speedMultiplier,  // Adjusted speed
+                        speed: 5,
                         angle: angle,
                         shooter: enemy // Track the shooter
                     });
@@ -679,14 +632,14 @@
         function updateMovement() {
             if (keys['Shift'] && orkShip.guzzle > 0) {
                 orkShip.isBoosting = true;
-                orkShip.speed = orkShip.originalSpeed * 2.2 * speedMultiplier; // Adjusted speed
+                orkShip.speed = orkShip.originalSpeed * 2.2; // Increase speed by 120%
                 orkShip.guzzle -= 0.5; // Decrease Guzzle meter
                 if (orkShip.guzzle < 0) {
                     orkShip.guzzle = 0;
                 }
             } else {
                 orkShip.isBoosting = false;
-                orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
+                orkShip.speed = orkShip.originalSpeed;
             }
 
             if (keys['ArrowUp'] || keys['w']) {
@@ -740,7 +693,7 @@
                     initialY: orkShip.y, // Initial position
                     width: 50,
                     height: 50,
-                    speed: 5 * speedMultiplier, // Adjusted speed
+                    speed: 5,
                     angle: angle, // Direction towards the mouse
                     radius: canvas.width / 10, // Halved explosion radius
                     maxTravelDistance: 300, // Set the max travel distance before detonation
@@ -824,7 +777,7 @@
             orkShip.waaaghActive = true;
             orkShip.image = images.waaaghShip;
             orkShip.color = 'red';
-            orkShip.speed = orkShip.originalSpeed * 2 * speedMultiplier; // Adjusted speed
+            orkShip.speed = orkShip.originalSpeed * 2;
             waaaghSound.play(); // Play Waaagh activation sound
             orkShip.waaaghAmmoGranted = false; // Reset the flag
             
@@ -836,7 +789,7 @@
         function deactivateWaaagh() {
             orkShip.image = images.orkShip;
             orkShip.color = 'green';
-            orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
+            orkShip.speed = orkShip.originalSpeed;
             orkShip.waaaghActive = false;
 
             // Check if ammo has already been granted for this Waaagh cycle
@@ -905,11 +858,11 @@
             // Reset game state
             orkShip.x = canvas.width / 2;
             orkShip.y = canvas.height - 100;
-            orkShip.width = canvas.width * 0.05;  // Scale width to screen size
-            orkShip.height = canvas.height * 0.08; // Scale height to screen size
+            orkShip.width = 60;  // Doubled the width
+            orkShip.height = 80; // Doubled the height
             orkShip.image = images.orkShip; // Reset to original image
             orkShip.color = 'green';
-            orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
+            orkShip.speed = orkShip.originalSpeed; // Ensure speed is set to originalSpeed
             orkShip.shootas = 1;
             orkShip.arma = 0;
             orkShip.scrap = 0;
@@ -977,33 +930,71 @@
             event.preventDefault();
         });
 
-        // Touch event listeners for movement
-        document.getElementById('moveArea').addEventListener('touchstart', (event) => {
-            keys['ArrowUp'] = true;
-        });
-        document.getElementById('moveArea').addEventListener('touchend', (event) => {
+        // Touch event listeners
+        document.addEventListener('touchstart', handleTouchStart, false);
+        document.addEventListener('touchmove', handleTouchMove, false);
+        document.addEventListener('touchend', handleTouchEnd, false);
+
+        let touchStartX = null;
+        let touchStartY = null;
+
+        function handleTouchStart(event) {
+            const touch = event.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+
+            // Detect touch areas for movement
+            if (touchStartX < window.innerWidth / 2) {
+                // Left side for movement
+                keys['ArrowUp'] = true;
+            } else {
+                // Right side for shooting
+                shooting = true;
+            }
+        }
+
+        function handleTouchMove(event) {
+            if (!touchStartX || !touchStartY) return;
+
+            const touch = event.touches[0];
+            const touchMoveX = touch.clientX;
+            const touchMoveY = touch.clientY;
+
+            const dx = touchMoveX - touchStartX;
+            const dy = touchMoveY - touchStartY;
+
+            if (dx > 50) {
+                // Right swipe
+                keys['ArrowRight'] = true;
+                keys['ArrowLeft'] = false;
+            } else if (dx < -50) {
+                // Left swipe
+                keys['ArrowLeft'] = true;
+                keys['ArrowRight'] = false;
+            }
+
+            if (dy > 50) {
+                // Down swipe
+                keys['ArrowDown'] = true;
+                keys['ArrowUp'] = false;
+            } else if (dy < -50) {
+                // Up swipe
+                keys['ArrowUp'] = true;
+                keys['ArrowDown'] = false;
+            }
+        }
+
+        function handleTouchEnd(event) {
+            // Reset movement keys on touch end
             keys['ArrowUp'] = false;
-        });
-
-        // Touch event listeners for shooting
-        document.getElementById('fireArea').addEventListener('touchstart', (event) => {
-            shooting = true;
-        });
-        document.getElementById('fireArea').addEventListener('touchend', (event) => {
+            keys['ArrowDown'] = false;
+            keys['ArrowLeft'] = false;
+            keys['ArrowRight'] = false;
             shooting = false;
-        });
-
-        // Touch event listeners for Guzzle
-        document.getElementById('guzzleArea').addEventListener('touchstart', (event) => {
-            keys['Shift'] = true;
-        });
-        document.getElementById('guzzleArea').addEventListener('touchend', (event) => {
-            keys['Shift'] = false;
-        });
+        }
 
         function startGame() {
             document.getElementById('startScreen').style.display = 'none';
-            document.getElementById('controls').style.display = isMobileDevice ? 'flex' : 'none';
             gameState = 'playing';
             restartGame();
         }
