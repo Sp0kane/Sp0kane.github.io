@@ -59,6 +59,31 @@
             text-align: left;
             margin-bottom: 20px;
         }
+        #controls {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .control-area {
+            width: 33%;
+            height: 200px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .control-area span {
+            color: #0f0;
+            font-size: 20px;
+            user-select: none;
+        }
+        .control-area:active {
+            background-color: rgba(0, 255, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -89,6 +114,11 @@
         <h2>GAME OVER, YA GIT!</h2>
         <button onclick="restartGame()">TRY AGAIN</button>
     </div>
+    <div id="controls">
+        <div id="moveArea" class="control-area"><span>Move</span></div>
+        <div id="guzzleArea" class="control-area"><span>Guzzle</span></div>
+        <div id="fireArea" class="control-area"><span>Fire</span></div>
+    </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -96,6 +126,8 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            orkShip.width = canvas.width * 0.05;
+            orkShip.height = canvas.height * 0.08;
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -145,8 +177,8 @@
         const orkShip = {
             x: canvas.width / 2,
             y: canvas.height - 100,
-            width: 60,  // Doubled the width
-            height: 80, // Doubled the height
+            width: canvas.width * 0.05,  // Scale width to screen size
+            height: canvas.height * 0.08, // Scale height to screen size
             image: images.orkShip,
             color: 'green',
             speed: 5,
@@ -868,8 +900,8 @@
             // Reset game state
             orkShip.x = canvas.width / 2;
             orkShip.y = canvas.height - 100;
-            orkShip.width = 60;  // Doubled the width
-            orkShip.height = 80; // Doubled the height
+            orkShip.width = canvas.width * 0.05;  // Scale width to screen size
+            orkShip.height = canvas.height * 0.08; // Scale height to screen size
             orkShip.image = images.orkShip; // Reset to original image
             orkShip.color = 'green';
             orkShip.speed = orkShip.originalSpeed * speedMultiplier; // Adjusted speed
@@ -940,68 +972,29 @@
             event.preventDefault();
         });
 
-        // Touch event listeners
-        document.addEventListener('touchstart', handleTouchStart, false);
-        document.addEventListener('touchmove', handleTouchMove, false);
-        document.addEventListener('touchend', handleTouchEnd, false);
-
-        let touchStartX = null;
-        let touchStartY = null;
-
-        function handleTouchStart(event) {
-            const touch = event.touches[0];
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-
-            // Detect touch areas for movement
-            if (touchStartX < window.innerWidth / 2) {
-                // Left side for movement
-                keys['ArrowUp'] = true;
-            } else {
-                // Right side for shooting
-                shooting = true;
-            }
-        }
-
-        function handleTouchMove(event) {
-            if (!touchStartX || !touchStartY) return;
-
-            const touch = event.touches[0];
-            const touchMoveX = touch.clientX;
-            const touchMoveY = touch.clientY;
-
-            const dx = touchMoveX - touchStartX;
-            const dy = touchMoveY - touchStartY;
-
-            if (dx > 50) {
-                // Right swipe
-                keys['ArrowRight'] = true;
-                keys['ArrowLeft'] = false;
-            } else if (dx < -50) {
-                // Left swipe
-                keys['ArrowLeft'] = true;
-                keys['ArrowRight'] = false;
-            }
-
-            if (dy > 50) {
-                // Down swipe
-                keys['ArrowDown'] = true;
-                keys['ArrowUp'] = false;
-            } else if (dy < -50) {
-                // Up swipe
-                keys['ArrowUp'] = true;
-                keys['ArrowDown'] = false;
-            }
-        }
-
-        function handleTouchEnd(event) {
-            // Reset movement keys on touch end
+        // Touch event listeners for movement
+        document.getElementById('moveArea').addEventListener('touchstart', (event) => {
+            keys['ArrowUp'] = true;
+        });
+        document.getElementById('moveArea').addEventListener('touchend', (event) => {
             keys['ArrowUp'] = false;
-            keys['ArrowDown'] = false;
-            keys['ArrowLeft'] = false;
-            keys['ArrowRight'] = false;
+        });
+
+        // Touch event listeners for shooting
+        document.getElementById('fireArea').addEventListener('touchstart', (event) => {
+            shooting = true;
+        });
+        document.getElementById('fireArea').addEventListener('touchend', (event) => {
             shooting = false;
-        }
+        });
+
+        // Touch event listeners for Guzzle
+        document.getElementById('guzzleArea').addEventListener('touchstart', (event) => {
+            keys['Shift'] = true;
+        });
+        document.getElementById('guzzleArea').addEventListener('touchend', (event) => {
+            keys['Shift'] = false;
+        });
 
         function startGame() {
             document.getElementById('startScreen').style.display = 'none';
