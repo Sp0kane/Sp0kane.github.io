@@ -131,8 +131,8 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            orkShip.width = canvas.width * 0.05;
-            orkShip.height = canvas.height * 0.08;
+            orkShip.width = Math.max(canvas.width * 0.05, 60);  // Ensure a minimum width of 60
+            orkShip.height = Math.max(canvas.height * 0.08, 80); // Ensure a minimum height of 80
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -1003,6 +1003,7 @@
 
         function startGame() {
             document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('controls').style.display = isMobileDevice ? 'flex' : 'none';
             gameState = 'playing';
             restartGame();
         }
