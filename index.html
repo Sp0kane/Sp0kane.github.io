@@ -60,29 +60,34 @@
             margin-bottom: 20px;
         }
         #controls {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            z-index: 10;
+            display: none;
         }
-        .control-area {
-            width: 33%;
-            height: 200px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 1px solid #0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .control-area span {
-            color: #0f0;
-            font-size: 20px;
-            user-select: none;
-        }
-        .control-area:active {
-            background-color: rgba(0, 255, 0, 0.2);
+        @media (max-width: 768px) {
+            #controls {
+                position: absolute;
+                bottom: 0;
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                z-index: 10;
+            }
+            .control-area {
+                width: 33%;
+                height: 100px;
+                background-color: rgba(0, 0, 0, 0.5);
+                border: 1px solid #0f0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .control-area span {
+                color: #0f0;
+                font-size: 20px;
+                user-select: none;
+            }
+            .control-area:active {
+                background-color: rgba(0, 255, 0, 0.2);
+            }
         }
     </style>
 </head>
